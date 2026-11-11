@@ -24,6 +24,9 @@ menyerahkan ke agen manusia.
 ## Arsitektur
 ![Arsitektur Asisten Kuota](architecture.png)
 
+## Demo
+[![Demo Asisten Kuota](https://img.youtube.com/vi/ID_VIDEO/hqdefault.jpg)](https://youtu.be/OlyiUIJwpFE)
+
 ## Cara menjalankan
 
 Kebutuhan: **Python 3** (diuji di 3.11, 3.12, dan 3.13; sintaksnya tidak memakai fitur di atas 3.9). Tidak perlu `pip install` apa pun.
