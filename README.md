@@ -25,7 +25,7 @@ menyerahkan ke agen manusia.
 ![Arsitektur Asisten Kuota](architecture.png)
 
 ## Demo
-[![Demo Asisten Kuota](https://img.youtube.com/vi/ID_VIDEO/hqdefault.jpg)](https://youtu.be/OlyiUIJwpFE)
+[![Demo Asisten Kuota](https://img.youtube.com/vi/OlyiUIJwpFE/hqdefault.jpg)](https://youtu.be/OlyiUIJwpFE)
 
 ## Cara menjalankan
 
