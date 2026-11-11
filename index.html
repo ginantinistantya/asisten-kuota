@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asisten Kuota - Prototipe D4</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --navy:#0b2a5b; --red:#d71920; --line:#d9dee7; --bg:#f3f5f9; --muted:#5b6678; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Calibri, Arial, sans-serif; background:var(--bg); color:#1b2433; height:100vh; display:flex; flex-direction:column; }
+  header { background:var(--navy); color:#fff; padding:10px 18px; display:flex; flex-wrap:wrap; gap:10px 24px; align-items:center; justify-content:space-between; }
+  header h1 { font-size:18px; margin:0; }
+  header h1 small { font-weight:normal; opacity:.8; margin-left:8px; font-size:12px; }
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .controls select, .controls button { font:inherit; padding:5px 8px; border-radius:6px; border:1px solid #fff3; }
+  .controls select { max-width:360px; }
+  .controls button { background:#fff; color:var(--navy); cursor:pointer; }
+  .controls button.danger { background:transparent; color:#fff; }
+  main { flex:1; min-height:0; display:grid; grid-template-columns: minmax(340px, 1fr) minmax(360px, 1fr); gap:14px; padding:14px; }
+  section, aside { background:#fff; border:1px solid var(--line); border-radius:10px; display:flex; flex-direction:column; min-height:0; }
+  .panel-title { padding:9px 14px; font-weight:bold; border-bottom:1px solid var(--line); font-size:14px; color:var(--navy); }
+  .panel-title small { font-weight:normal; color:var(--muted); margin-left:6px; }
+  #messages, #trace { flex:1; overflow-y:auto; padding:12px 14px; }
+  .msg { margin-bottom:10px; display:flex; flex-direction:column; }
+  .msg.user { align-items:flex-end; }
+  .bubble { max-width:86%; padding:8px 12px; border-radius:12px; line-height:1.4; font-size:14px; white-space:pre-wrap; }
+  .msg.bot .bubble { background:#eef2f9; border-top-left-radius:2px; }
+  .msg.user .bubble { background:var(--navy); color:#fff; border-top-right-radius:2px; }
+  .msg.system .bubble { background:#fff6d6; border:1px solid #f0d77a; max-width:100%; font-size:13px; }
+  .msg.handoff .bubble { background:#fdecec; border:1px solid #f0a9ab; max-width:100%; font-size:13px; }
+  .buttons { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; max-width:92%; }
+  .choice { font:inherit; font-size:13px; padding:6px 11px; border-radius:16px; border:1px solid var(--navy); background:#fff; color:var(--navy); cursor:pointer; }
+  .choice:hover:not(:disabled) { background:var(--navy); color:#fff; }
+  .choice:disabled { opacity:.45; cursor:default; }
+  .choice.confirm { background:var(--red); border-color:var(--red); color:#fff; font-weight:bold; }
+  form { display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--line); }
+  form input { flex:1; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; }
+  form button { font:inherit; padding:8px 16px; border:0; border-radius:8px; background:var(--red); color:#fff; cursor:pointer; }
+  form button:disabled { opacity:.5; }
+  .trow { font-size:12px; border-bottom:1px solid #eef0f4; padding:5px 0; display:grid; grid-template-columns: 26px 54px 62px 1fr; gap:6px; align-items:start; }
+  .trow .n { color:var(--muted); }
+  .tag { font-size:10px; font-weight:bold; text-transform:uppercase; padding:1px 5px; border-radius:4px; text-align:center; color:#fff; }
+  .tag.customer { background:#5b6678; } .tag.llm { background:#7a4fc4; } .tag.rules { background:var(--navy); }
+  .tag.tool { background:#127a5a; } .tag.agent { background:#2f6fd0; } .tag.human { background:var(--red); }
+  .trow .ev b { margin-right:6px; }
+  .trow .det { color:var(--muted); word-break:break-word; }
+  .hint { color:var(--muted); font-size:13px; padding:4px 14px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Asisten Kuota <small>Prototipe D4 · simulasi MyTelkomsel · SEMUA DATA DUMMY</small></h1>
+  <div class="controls">
+    <label for="customer">Pelanggan (simulasi login):</label>
+    <select id="customer"></select>
+    <button id="newChat">Percakapan baru</button>
+    <button id="reset" class="danger" title="Kembalikan saldo, kuota, dan tiket mock ke kondisi awal">Reset data mock</button>
+  </div>
+</header>
+<main>
+  <section>
+    <div class="panel-title">Chat <small id="context"></small></div>
+    <div id="messages"></div>
+    <form id="form" autocomplete="off">
+      <input id="input" placeholder="Ketik pesan, misalnya: kuota saya habis" maxlength="300">
+      <button id="send">Kirim</button>
+    </form>
+  </section>
+  <aside>
+    <div class="panel-title">Trace langkah agen <small>data pribadi sudah di-mask · juga disimpan di logs/trace.jsonl</small></div>
+    <div id="trace"></div>
+  </aside>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let customers = [], convId = null, traceTimer = null;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;     // textContent: aman dari injeksi HTML
+  return e;
+}
+
+async function api(path, body) {
+  const options = body === undefined ? {} : {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const response = await fetch(path, options);
+  return response.json();
+}
+
+// ---------------------------------------------------------------- chat
+function addMessage(kind, text) {
+  const message = el('div', 'msg ' + kind);
+  message.appendChild(el('div', 'bubble', text));
+  $('messages').appendChild(message);
+  $('messages').scrollTop = $('messages').scrollHeight;
+  return message;
+}
+
+function addButtons(message, buttons) {
+  const box = el('div', 'buttons');
+  buttons.forEach((b) => {
+    const isConfirm = b.action.type === 'confirm_purchase' || b.action.type === 'confirm_ticket';
+    const btn = el('button', 'choice' + (isConfirm ? ' confirm' : ''), b.label);
+    btn.type = 'button';
+    btn.onclick = () => {
+      box.querySelectorAll('button').forEach((x) => (x.disabled = true));   // cegah klik ganda di UI
+      send({ action: b.action }, b.label);
+    };
+    box.appendChild(btn);
+  });
+  message.appendChild(box);
+}
+
+function addHandoff(h) {
+  const lines = ['Diteruskan ke agen manusia (simulasi). Ringkasan untuk agen:',
+    'Ref: ' + h.conversation + ' · Nomor: ' + h.msisdn + ' · Sel: ' + h.cell,
+    'Alasan: ' + h.reason,
+    'Temuan: ' + (Object.keys(h.facts).length ? JSON.stringify(h.facts) : '-')];
+  addMessage('handoff', lines.join('\n'));
+}
+
+function setBusy(busy) {
+  $('send').disabled = busy;
+  $('input').disabled = busy;
+  if (!busy) $('input').focus();
+}
+
+async function send(payload, shownText) {
+  addMessage('user', shownText);
+  setBusy(true);
+  const typing = addMessage('bot', '...');
+  traceTimer = setInterval(refreshTrace, 600);         // tampilkan trace langsung saat agen bekerja
+  try {
+    const res = await api('/api/chat', Object.assign({ conversation_id: convId, msisdn: $('customer').value }, payload));
+    typing.remove();
+    if (res.error) { addMessage('system', 'Error: ' + res.error); return; }
+    convId = res.conversation_id;
+    res.replies.forEach((r) => {
+      const message = addMessage('bot', r.text);
+      if (r.buttons.length) addButtons(message, r.buttons);
+    });
+    if (res.handoff) addHandoff(res.handoff);
+  } catch (e) {
+    typing.remove();
+    addMessage('system', 'Gagal menghubungi server: ' + e.message);
+  } finally {
+    clearInterval(traceTimer);
+    await refreshTrace();
+    setBusy(false);
+  }
+}
+
+// ---------------------------------------------------------------- trace
+function describe(row) {
+  const d = row.details;
+  if (row.event === 'api_call') {
+    return d.tool + ' · ' + d.method + ' ' + d.path + ' · ' + d.result + ' · ' + d.ms + ' ms · percobaan ' + d.attempt +
+      (d.idempotency_key ? ' · key ' + d.idempotency_key.slice(0, 8) + '…' : '');
+  }
+  if (row.event === 'reply') return d.text;
+  return Object.keys(d).map((k) => k + '=' + JSON.stringify(d[k])).join(' · ');
+}
+
+async function refreshTrace() {
+  if (!convId) return;
+  const rows = await api('/api/trace?conversation_id=' + convId);
+  const box = $('trace');
+  box.textContent = '';
+  rows.forEach((row) => {
+    const r = el('div', 'trow');
+    r.appendChild(el('span', 'n', '#' + row.step));
+    r.appendChild(el('span', 'n', row.time));
+    r.appendChild(el('span', 'tag ' + row.actor, row.actor));
+    const ev = el('div', 'ev');
+    ev.appendChild(el('b', '', row.event));
+    ev.appendChild(el('div', 'det', describe(row)));
+    r.appendChild(ev);
+    box.appendChild(r);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---------------------------------------------------------------- mulai / reset
+function startChat() {
+  convId = null;
+  $('messages').textContent = '';
+  $('trace').textContent = '';
+  const c = customers.find((x) => x.msisdn === $('customer').value);
+  $('context').textContent = c ? 'Sel perangkat (konteks aplikasi): ' + c.cell : '';
+  const hello = addMessage('bot', 'Halo Kak! Saya Asisten Kuota MyTelkomsel. Ada yang bisa dibantu?');
+  addButtons(hello, [
+    { label: 'Kuota saya habis', action: { type: 'say', text: 'kuota saya habis' } },
+    { label: 'Internet saya lambat', action: { type: 'say', text: 'internet saya lambat' } },
+    { label: 'Cek sisa kuota', action: { type: 'say', text: 'cek sisa kuota' } },
+  ]);
+  $('input').focus();
+}
+
+async function init() {
+  customers = await api('/api/customers');
+  customers.forEach((c) => {
+    const o = el('option', '', c.scenario + '  (' + c.msisdn.slice(0, 4) + '****' + c.msisdn.slice(-4) + ')');
+    o.value = c.msisdn;
+    $('customer').appendChild(o);
+  });
+  $('customer').onchange = startChat;
+  $('newChat').onclick = startChat;
+  $('reset').onclick = async () => { await api('/api/reset', {}); startChat(); addMessage('system', 'Data mock dikembalikan ke kondisi awal.'); };
+  $('form').onsubmit = (e) => {
+    e.preventDefault();
+    const text = $('input').value.trim();
+    if (!text) return;
+    $('input').value = '';
+    send({ text: text }, text);
+  };
+  startChat();
+}
+init();
+</script>
+</body>
+</html>

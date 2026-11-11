@@ -1,0 +1,21 @@
+# Jalankan:  docker compose up --build      lalu buka http://localhost:8000
+# Berhenti:  Ctrl+C, atau  docker compose down
+services:
+  app:
+    build: .
+    image: asisten-kuota:prototype
+    # Penting: Python sebagai proses utama (PID 1) di container mengabaikan sinyal berhenti,
+    # sehingga `docker stop` menunggu 10 detik. init: true memasang proses kecil yang meneruskan sinyal.
+    init: true
+    ports:
+      # Hanya bisa dibuka dari komputer ini (127.0.0.1). Aplikasi ini TIDAK punya login,
+      # jadi jangan diubah menjadi "8000:8000" (itu membuka ke seluruh jaringan).
+      # Port di sisi host bisa diganti, misalnya:  APP_PORT=9000 docker compose up
+      - "127.0.0.1:${APP_PORT:-8000}:8000"   # aplikasi chat
+      - "127.0.0.1:${MOCK_PORT:-8001}:8001"  # mock API (opsional, untuk dicoba dengan curl/Postman)
+    volumes:
+      # Log trace disimpan di volume bernama supaya tidak hilang saat container dibuat ulang.
+      - trace-logs:/app/logs
+
+volumes:
+  trace-logs:
