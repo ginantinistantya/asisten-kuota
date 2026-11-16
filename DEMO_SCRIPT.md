@@ -1,6 +1,6 @@
 # Skrip Demo (maksimal 3 menit)
 
-Syarat D4: video demo maksimal 3 menit. Video **belum dibuat**; rekam sendiri (layar penuh browser + suara) mengikuti skrip ini.
+Syarat D4: video demo maksimal 3 menit. Video: https://youtu.be/OlyiUIJwpFE (direkam mengikuti skrip ini).
 Total target: sekitar 2 menit 50 detik. Latih sekali dulu supaya pas.
 
 **Persiapan (sebelum merekam):** `python run.py` (atau `docker compose up --build`), buka http://localhost:8000, klik **Reset data mock**. Zoom browser 100%.

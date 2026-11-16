@@ -19,7 +19,7 @@ menyerahkan ke agen manusia.
 | Data dummy minimal 5 pelanggan, kondisi berbeda | 9 pelanggan (`dummy_data.py`) |
 | LLM dan framework bebas | Python bawaan saja. **LLM-nya stub** (lihat "Yang belum ada") |
 | Repo Git + README cara menjalankan | File ini + `git init` (lihat bawah) |
-| Video demo maks. 3 menit | **Belum ada.** Rekam sendiri mengikuti `DEMO_SCRIPT.md` |
+| Video demo maks. 3 menit | **Ada.** [YouTube](https://youtu.be/OlyiUIJwpFE), lihat bagian Demo; alurnya mengikuti `DEMO_SCRIPT.md` |
 
 ## Arsitektur
 ![Arsitektur Asisten Kuota](architecture.png)
@@ -157,7 +157,7 @@ Urutan membaca yang disarankan: dari atas ke bawah.
 
 **Belum ada di prototipe:**
 - **Tidak ada LLM sungguhan.** `llm_stub.py` membaca kata kunci dan memakai template kalimat. Ini sengaja: bisa dijalankan tanpa API key dan perilakunya bisa dites. Konsekuensinya, pemahaman bahasa bebas terbatas, dan "tool calling" dilakukan orkestrator berbasis aturan, bukan LLM yang memilih fungsi.
-- **Biaya LLM (target Rp250/percakapan) tidak diukur**, karena tidak ada LLM. Angka di slide 5 adalah ilustrasi.
+- **Biaya LLM (target Rp250/percakapan) tidak diukur**, karena tidak ada LLM. Angka biaya di slide presentasi adalah ilustrasi.
 - **Retensi data baru berupa kebijakan, belum ada kode penghapusan.** Usulan: percakapan ter-mask 30 hari, log transaksi ter-mask 12 bulan, keputusan akhir ada di Legal/DPO. `logs/trace.jsonl` bertambah terus.
 - **Tidak ada autentikasi.** "Login" adalah dropdown. Bawaannya server hanya mendengarkan `127.0.0.1`; di Docker, port hanya dipublikasikan ke `127.0.0.1` host. Jangan dibuka ke jaringan.
 - Handoff ke agen manusia adalah **simulasi lokal** (ringkasan ditampilkan di UI dan trace). Kontrak tidak punya endpoint handoff.
